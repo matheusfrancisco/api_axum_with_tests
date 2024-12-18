@@ -1,6 +1,6 @@
 use std::net::IpAddr;
 
-mod router;
+pub mod router;
 
 use eyre::Result;
 use router::create_main_router;

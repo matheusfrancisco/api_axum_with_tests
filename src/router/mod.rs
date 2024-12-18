@@ -1,7 +1,6 @@
 use axum::Router;
 use posts::create_posts_router;
-mod posts;
-
+pub mod posts;
 
 pub fn create_main_router() -> Router {
 

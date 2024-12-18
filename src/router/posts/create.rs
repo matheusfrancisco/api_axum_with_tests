@@ -9,7 +9,12 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-pub async fn create_post(post: CreatePost) {}
+pub async fn create_post(
+    post: CreatePost,
+) -> Result<(StatusCode, String), (StatusCode, &'static str)> {
+    tracing::debug!("Post : {:?}", post);
+    Err((StatusCode::INTERNAL_SERVER_ERROR, "Not implemented yet"))
+}
 
 #[derive(Debug)]
 pub struct CreatePost {
@@ -51,6 +56,16 @@ where
             )
                 .into_response());
         }
+
+        if let Some(parent_id) = post.parent_id {
+            if parent_id <= 0 {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "Parent ID must be a positive integer",
+                )
+                    .into_response());
+            }
+        }
         Ok(Self { text })
     }
 }
@@ -68,9 +83,7 @@ mod tests {
         extract::FromRequest,
         http::{Request, StatusCode},
     };
-    //use hyper::body::to_bytes;
     use serde_json::json;
-    use tokio::sync::OnceCell;
 
     use super::*;
 
@@ -127,6 +140,22 @@ mod tests {
     async fn test_from_request_invalid_field_length() {
         let long_text = "a".repeat(256);
         let body = Body::from(json!({"text": long_text}).to_string());
+        let request = Request::builder()
+            .header("content-type", "application/json")
+            .body(body)
+            .unwrap();
+
+        let result = CreatePost::from_request(request, &()).await;
+
+        assert!(result.is_err());
+
+        let response = result.unwrap_err();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_from_request_invalid_parent_id() {
+        let body = Body::from(json!({"message": "Hello post ", "parent_id": -1}).to_string());
         let request = Request::builder()
             .header("content-type", "application/json")
             .body(body)
