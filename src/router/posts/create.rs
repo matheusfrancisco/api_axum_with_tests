@@ -1,7 +1,6 @@
 //use crate::{database::queries::insert_post, state::AppState};
 use axum::{
     async_trait,
-    body::Bytes,
     extract::{rejection::JsonRejection, FromRequest, Request, State},
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -9,16 +8,34 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::{database::queries::insert_post, state::AppState};
+
+#[derive(Serialize, Clone, Deserialize, Debug)]
+pub struct InsertPost {
+    pub id: i32,
+}
+
 pub async fn create_post(
+    state: State<AppState>,
     post: CreatePost,
-) -> Result<(StatusCode, String), (StatusCode, &'static str)> {
+) -> Result<(StatusCode, Json<InsertPost>), (StatusCode, &'static str)> {
     tracing::debug!("Post : {:?}", post);
-    Err((StatusCode::INTERNAL_SERVER_ERROR, "Not implemented yet"))
+    let post_id = insert_post(state.db.clone(), &post.text, post.parent_id)
+        .await
+        .map_err(|error| {
+            tracing::error!("Error inserting post into database: {:?}", error);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to insert post into database",
+            )
+        })?;
+    Ok((StatusCode::CREATED, Json(InsertPost { id: post_id })))
 }
 
 #[derive(Debug)]
 pub struct CreatePost {
     pub text: String,
+    pub parent_id: Option<i32>,
 }
 
 #[async_trait]
@@ -66,7 +83,10 @@ where
                     .into_response());
             }
         }
-        Ok(Self { text })
+        Ok(Self {
+            text,
+            parent_id: post.parent_id,
+        })
     }
 }
 
