@@ -4,10 +4,15 @@ use axum::{
 };
 use create::create_post;
 
+pub mod create;
+pub mod get_all_top_level;
+
+
 use crate::state::AppState;
 
-pub mod create;
 
 pub fn create_posts_router() -> Router<AppState> {
-    Router::new().route("/", post(create_post))
+    Router::new()
+        .route("/", post(create_post))
+        .route("/", get(get_all_top_level::get_all_top_level))
 }
